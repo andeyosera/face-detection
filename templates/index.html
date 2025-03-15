@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureFace Access System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-blue-800 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="text-xl font-bold">SecureFace</span>
+                    </div>
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <a href="/" class="px-3 py-2 rounded-md text-sm font-medium bg-blue-900">Home</a>
+                            <a href="/register" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Register Employee</a>
+                            <a href="/employees" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Manage Employees</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <header class="bg-white shadow">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <h1 class="text-3xl font-bold text-gray-900">Employee Access Verification</h1>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="px-4 py-6 sm:px-0">
+            <div class="bg-white shadow rounded-lg p-6">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-semibold text-gray-800">Face Recognition Access System</h2>
+                    <p class="mt-2 text-gray-600">Please position your face in front of the camera and click the button below</p>
+                </div>
+
+                <div class="flex flex-col items-center">
+                    <div class="relative w-full max-w-md h-64 bg-gray-200 rounded-lg mb-4 overflow-hidden">
+                        <video id="webcam-feed" class="w-full h-full object-cover" autoplay></video>
+                        <div id="overlay" class="absolute inset-0 flex items-center justify-center">
+                            <div class="text-gray-500 text-lg">
+                                <i class="fas fa-camera text-5xl mb-2"></i>
+                                <p>Camera will activate when ready</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex space-x-4">
+                        <button id="capture-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg flex items-center">
+                            <i class="fas fa-camera mr-2"></i> Scan Face
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 mt-8">
+        <div class="max-w-7xl mx-auto py-6 px-4 overflow-hidden sm:px-6 lg:px-8">
+            <p class="text-center text-base text-gray-500">
+                &copy; 2025 SecureFace Access System. All rights reserved.
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('webcam-feed');
+            const overlay = document.getElementById('overlay');
+            const captureBtn = document.getElementById('capture-btn');
+
+            // Access the webcam
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function(stream) {
+                        video.srcObject = stream;
+                        overlay.classList.add('hidden');
+                    })
+                    .catch(function(error) {
+                        console.error("Camera error:", error);
+                        overlay.innerHTML = '<div class="text-red-500"><i class="fas fa-exclamation-triangle text-5xl mb-2"></i><p>Camera access denied or not available</p></div>';
+                    });
+            } else {
+                overlay.innerHTML = '<div class="text-red-500"><i class="fas fa-exclamation-triangle text-5xl mb-2"></i><p>Camera not supported in this browser</p></div>';
+            }
+
+            // Capture the image
+            captureBtn.addEventListener('click', () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const context = canvas.getContext('2d');
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Convert the canvas image to a data URL
+                const imageData = canvas.toDataURL('image/jpeg');
+
+                // Send the image data to the Flask backend
+                fetch('/capture', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: imageData }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        window.location.href = '/result?status=' + data.access_status;
+                    } else {
+                        alert("Failed to capture image. Please try again.");
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error:", error);
+                    alert("An error occurred. Please try again.");
+                });
+            });
+        });
+    </script>
+</body>
+</html>
